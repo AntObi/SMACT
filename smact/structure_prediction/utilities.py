@@ -25,15 +25,12 @@ def parse_spec(species: str) -> Tuple[str, int]:
         ('O', -2)
 
     """
-    ele = re.match(r"[A-Za-z]+", species).group(0)
-
-    charge_match = re.search(r"\d+", species)
-    charge = int(charge_match.group(0)) if charge_match else 0
-
-    if "-" in species:
-        charge *= -1
-
-    return ele, charge
+    ele, oxi_state = re.match(r"([A-Za-z]+)([0-9]*[\+\-])", species).groups()
+    if oxi_state[-1] in ["+", "-"]:
+        charge = (int(oxi_state[:-1]) or 1) * (-1 if "-" in oxi_state else 1)
+        return ele, charge
+    else:
+        return ele, 0
 
 
 def unparse_spec(species: Tuple[str, int]) -> str:
