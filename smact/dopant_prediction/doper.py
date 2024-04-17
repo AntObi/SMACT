@@ -33,6 +33,9 @@ class Doper:
         """
         self._original_species = _original_species
         self._filepath = filepath
+        self._cation_mutator = mutation.CationMutator.from_json(self._filepath)
+        self._possible_species = list(self._cation_mutator.specs)
+        self.results = {}
 
     @property
     def original_species(self):
@@ -43,6 +46,10 @@ class Doper:
         self._original_species = original_species
 
     @property
+    def possible_species(self):
+        return self._possible_species
+
+    @property
     def filepath(self):
         return self._filepath
 
@@ -51,43 +58,35 @@ class Doper:
         self._filepath = filepath
 
     def _get_cation_dopants(
-        self, element_objects: List[smact.Element], cations: List[str]
+        self, cations: List[str]
     ):
         poss_n_type_cat = set()
         poss_p_type_cat = set()
 
-        for element in element_objects:
-            # [-2, -1, 0, +1, +2]
-            oxi_state = element.oxidation_states
-            el_symbol = element.symbol
-            for state in oxi_state:
-                for cation in cations:
-                    ele = utilities.unparse_spec((el_symbol, state))
-                    _, charge = utilities.parse_spec(cation)
-                    if state > charge:
-                        poss_n_type_cat.add(ele)
-                    elif state < charge and state > 0:
-                        poss_p_type_cat.add(ele)
+        for spec in self.possible_species:
+            _, state = utilities.parse_spec(spec)
+            for cation in cations:
+                _, charge = utilities.parse_spec(cation)
+                if state > charge:
+                    poss_n_type_cat.add(spec)
+                elif charge > state > 0:
+                    poss_p_type_cat.add(spec)
 
         return list(poss_n_type_cat), list(poss_p_type_cat)
 
     def _get_anion_dopants(
-        self, element_objects: List[smact.Element], anions: List[str]
+        self, anions: List[str]
     ):
         poss_n_type_an = set()
         poss_p_type_an = set()
-
-        for element in element_objects:
-            oxi_state = element.oxidation_states
-            el_symbol = element.symbol
-            for state in oxi_state:
-                for anion in anions:
-                    ele = utilities.unparse_spec((el_symbol, state))
-                    _, charge = utilities.parse_spec(anion)
-                    if state > charge and state < 0:
-                        poss_n_type_an.add(ele)
-                    elif state < charge:
-                        poss_p_type_an.add(ele)
+        for spec in self.possible_species:
+            _, state = utilities.parse_spec(spec)
+            for anion in anions:
+                _, charge = utilities.parse_spec(anion)
+                if charge < state < 0:
+                    poss_n_type_an.add(spec)
+                elif state < charge:
+                    poss_p_type_an.add(spec)
         return list(poss_n_type_an), list(poss_p_type_an)
 
     def get_dopants(
@@ -128,14 +127,11 @@ class Doper:
 
         CM = mutation.CationMutator.from_json(self._filepath)
 
-        # call all elements
-        element_objects = list(smact.element_dictionary().values())
-
         poss_n_type_cat, poss_p_type_cat = self._get_cation_dopants(
-            element_objects, cations
+            cations
         )
         poss_n_type_an, poss_p_type_an = self._get_anion_dopants(
-            element_objects, anions
+             anions
         )
 
         n_type_cat, p_type_cat, n_type_an, p_type_an = [], [], [], []
